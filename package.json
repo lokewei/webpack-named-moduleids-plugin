@@ -1,0 +1,27 @@
+{
+  "name": "webpack-named-moduleids-plugin",
+  "version": "1.0.0",
+  "description": "base on packagename+version to generator module id ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lokewei/webpack-named-moduleids-plugin.git"
+  },
+  "keywords": [
+    "webpack",
+    "plugin"
+  ],
+  "author": "lokewei",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lokewei/webpack-named-moduleids-plugin/issues"
+  },
+  "homepage": "https://github.com/lokewei/webpack-named-moduleids-plugin#readme",
+  "dependencies": {
+    "global-dirs": "^0.1.1",
+    "schema-utils": "^1.0.0"
+  }
+}
