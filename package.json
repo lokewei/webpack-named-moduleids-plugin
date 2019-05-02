@@ -1,6 +1,6 @@
 {
   "name": "webpack-named-moduleids-plugin",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "base on packagename+version to generator module id ",
   "main": "index.js",
   "scripts": {

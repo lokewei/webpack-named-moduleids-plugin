@@ -83,10 +83,11 @@ class NamedHash {
   constructor(hash, enforeModules = []) {
     this.string = "";
     this.bulkHash = new BulkUpdateDecorator(hash);
-    this.localRegex = /[\\/]node_modules[\\/]([^\\/]*)[\\/].*/i;
-    this.foldRegex = /@([^@]+)@/g;
-    this.versionRegex = /@([\d\.]+)@/;
-    this.rootRegex = /@@([^@]+)/;
+    this.localRegex = /[\\/]node_modules[\\/]([^\\/]+)[\\/].*/i; // node_modules后面紧跟的一级目录
+    this.foldRegex = /@([^@]+)@/g; // 匹配一级目录
+    this.versionRegex = /@([\d\.]+)@/; // 匹配flatten中的版本号
+    this.rootRegex = /@@([^@]+)/; // 匹配flatten中的scope名称
+    this.scopeRegex = /@[^@\\/]+[\\/][^\\/]+[\\/]/; // 匹配非flatten的scope包名
     this.enforeModules = enforeModules;
   }
 
@@ -96,6 +97,7 @@ class NamedHash {
       this.string = absContext.replace(globalDirs.npm.packages, '@npm-global-dir');
       return this;
     }
+    console.log(data);
     if (absContext.startsWith(projectDir)) {
       // const pkg = require(path.join(projectDir, 'package.json'));
       const matchs = this.localRegex.exec(absContext);
@@ -109,6 +111,7 @@ class NamedHash {
         if (!ignore) {
           const versionMatchs = this.versionRegex.exec(flattenName);
           let version = versionMatchs && versionMatchs[1];
+          // 这里处理flatten格式的
           if (rootRegexMatchs && rootRegexMatchs[1]) {
             const rootName = rootRegexMatchs[1]
             const subFolds = [];
@@ -121,6 +124,13 @@ class NamedHash {
             }
             subFolds.unshift(`@${rootName}`);
             flattenName = subFolds.join('/');
+          }
+          // 这里处理未flatten，但是有scope的
+          if (/^@/.test(flattenName)) {
+            const scopeMatchs = this.scopeRegex.exec(absContext);
+            if (scopeMatchs && scopeMatchs[0]) {
+              flattenName = scopeMatchs[0].slice(0, -1);
+            }
           }
           const pkgData = require(path.join(projectDir, 'node_modules', flattenName, 'package.json'));
           const { name } = pkgData;
