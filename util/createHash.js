@@ -84,7 +84,9 @@ class NamedHash {
     this.string = "";
     this.bulkHash = new BulkUpdateDecorator(hash);
     this.localRegex = /[\\/]node_modules[\\/]([^\\/]*)[\\/].*/i;
-    this.versionRegex = /@([^@]*)@/i;
+    this.foldRegex = /@([^@]+)@/g;
+    this.versionRegex = /@([\d\.]+)@/;
+    this.rootRegex = /@@([^@]+)/;
     this.enforeModules = enforeModules;
   }
 
@@ -98,21 +100,39 @@ class NamedHash {
       // const pkg = require(path.join(projectDir, 'package.json'));
       const matchs = this.localRegex.exec(absContext);
       if (matchs && matchs[1]) {
-        const flattenName = matchs[1];
+        let flattenName = matchs[1]; // _@xxxx@x.y.z@xxx or _@xxxx@x.y.z@@root
         // 忽略白名单的模块
         const ignore = this.enforeModules.some(emodule => {
           return flattenName.includes(emodule);
         });
+        const rootRegexMatchs = this.rootRegex.exec(flattenName);
         if (!ignore) {
-          const versionMatchs = this.versionRegex.exec(flattenName)
-          const version = versionMatchs && versionMatchs[1] || '';
+          const versionMatchs = this.versionRegex.exec(flattenName);
+          let version = versionMatchs && versionMatchs[1];
+          if (rootRegexMatchs && rootRegexMatchs[1]) {
+            const rootName = rootRegexMatchs[1]
+            const subFolds = [];
+            let subFoldMatchs;
+            while ((subFoldMatchs = this.foldRegex.exec(flattenName)) !== null) {
+              const subFold = subFoldMatchs && subFoldMatchs[1];
+              if (subFold && subFold !== version) {
+                subFolds.unshift(subFold.replace(`${rootName}_`, ''));
+              }
+            }
+            subFolds.unshift(`@${rootName}`);
+            flattenName = subFolds.join('/');
+          }
+          const pkgData = require(path.join(projectDir, 'node_modules', flattenName, 'package.json'));
+          const { name } = pkgData;
+          version = pkgData.version;
           const blurVersion = version.split('.').map((v, i) => i > 0 ? 'x' : v).join('.');
-          const blurName = flattenName.replace(version, blurVersion);
+          const blurName = `${name}@${blurVersion}`;
+          // const blurName = flattenName.replace(version, blurVersion);
           absContext = absContext.replace(this.localRegex, function(match, $1, offset, str) {
-            return match.replace($1, blurName);
+            return match.replace($1, blurName)
+            // return match.replace($1, blurName);
           });
         }
-        console.log(absContext);
       }
       this.string = absContext.replace(projectDir, '');
       return this;

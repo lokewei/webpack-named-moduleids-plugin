@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "Debug Build",
       "cwd": "/Users/locke.wei/Dev/bgm-components/bgm-comp-optimize-tab",
-      "program": "/Users/locke.wei/Dev/ice/tools/ice-scripts/bin/ice-build.js",
+      "program": "/Users/locke.wei/Dev/builder-cream/build.js",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     }

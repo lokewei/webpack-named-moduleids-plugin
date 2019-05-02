@@ -38,8 +38,9 @@ class NamedModuleIdsPlugin {
         modules => {
           for (const module of modules) {
             if (module.id === null && module.libIdent) {
+              const context = this.options.context || compiler.options.context;
               const id = module.libIdent({
-                context: this.options.context || compiler.options.context
+                context
               });
               module.id = id;
               const hash = createHash(options.hashFunction, options.enforeModules);
