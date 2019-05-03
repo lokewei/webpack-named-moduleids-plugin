@@ -97,7 +97,6 @@ class NamedHash {
       this.string = absContext.replace(globalDirs.npm.packages, '@npm-global-dir');
       return this;
     }
-    console.log(data);
     if (absContext.startsWith(projectDir)) {
       // const pkg = require(path.join(projectDir, 'package.json'));
       const matchs = this.localRegex.exec(absContext);
@@ -172,7 +171,7 @@ module.exports = (algorithm, enforeModules) => {
     case "debug":
       return new DebugHash();
     case "named":
-      return new NamedHash(require("crypto").createHash('sha256'), enforeModules);
+      return new NamedHash(require("crypto").createHash('md4'), enforeModules);
     default:
       return new BulkUpdateDecorator(require("crypto").createHash(algorithm));
   }

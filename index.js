@@ -23,7 +23,9 @@ class NamedModuleIdsPlugin {
         context: null,
         hashFunction: "md4",
         hashDigest: "base64",
-        hashDigestLength: 4
+        hashDigestLength: 4,
+        enforeModules: [],
+        namedToHash: false
       },
       options
     );
@@ -44,9 +46,20 @@ class NamedModuleIdsPlugin {
               });
               module.id = id;
               const hash = createHash(options.hashFunction, options.enforeModules);
-              hash.update(id);
-              const hashId = hash.digest(options.hashDigest);
+              const realHash = hash.update(id);
+              let hashId = hash.digest(options.hashDigest);
+              if (realHash.constructor.name === 'NamedHash') {
+                if (options.namedToHash) {
+                  realHash.bulkHash.update(hashId);
+                  hashId = realHash.bulkHash.digest('hex');
+                } else {
+                  module.id = hashId;
+                  usedIds.add(module.id);
+                  return;
+                }
+              }
               let len = options.hashDigestLength;
+              // 这个是为了防止hash重复，+1操作
               while (usedIds.has(hashId.substr(0, len))) len++;
               module.id = hashId.substr(0, len);
               usedIds.add(module.id);

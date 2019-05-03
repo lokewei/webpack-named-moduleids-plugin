@@ -26,6 +26,10 @@
       "description": "The force package with named, includes package will not blured; rule: pkgname@x.y.z",
       "type": "array",
       "minLength": 0
+    },
+    "namedToHash": {
+      "description": "If generate named module id, whether encode it to hash for minisize",
+      "type": "boolean"
     }
   }
 }
