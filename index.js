@@ -48,6 +48,7 @@ class NamedModuleIdsPlugin {
               const hash = createHash(options.hashFunction, options.enforeModules);
               const realHash = hash.update(id);
               let hashId = hash.digest(options.hashDigest);
+              // console.log(hashId, hash.constructor.name, realHash.constructor.name, options.namedToHash);
               if (realHash.constructor.name === 'NamedHash') {
                 if (options.namedToHash) {
                   realHash.bulkHash.update(hashId);
@@ -55,7 +56,7 @@ class NamedModuleIdsPlugin {
                 } else {
                   module.id = hashId;
                   usedIds.add(module.id);
-                  return;
+                  continue;
                 }
               }
               let len = options.hashDigestLength;
