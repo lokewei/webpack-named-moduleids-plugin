@@ -12,7 +12,7 @@ class NamedModuleIdsPlugin {
 	/**
 	 * @param {NamedModuleIdsPluginOptions=} options options object
 	 */
-  constructor(options) {
+  constructor(options, callback) {
     if (!options) options = {};
 
     validateOptions(schema, options, "Hashed Module Ids Plugin");
@@ -25,14 +25,19 @@ class NamedModuleIdsPlugin {
         hashDigest: "base64",
         hashDigestLength: 4,
         enforeModules: [],
-        namedToHash: false
+        namedToHash: false,
+        callback: null
       },
       options
     );
+    this.callback = callback;
   }
 
   apply(compiler) {
     const options = this.options;
+    const namedModules = new Set();
+    const namedModuleHashs = {};
+    const callback = this.callback;
     compiler.hooks.compilation.tap("NamedModuleIdsPlugin", compilation => {
       const usedIds = new Set();
       compilation.hooks.beforeModuleIds.tap(
@@ -48,11 +53,16 @@ class NamedModuleIdsPlugin {
               const hash = createHash(options.hashFunction, options.enforeModules);
               const realHash = hash.update(id);
               let hashId = hash.digest(options.hashDigest);
-              // console.log(hashId, hash.constructor.name, realHash.constructor.name, options.namedToHash);
+              let pureId; // 记录本次未hash的id
               if (realHash.constructor.name === 'NamedHash') {
+                // 记录所有未hash的id
+                if (/^[\/]node_module/.test(hashId)) {
+                  namedModules.add(hashId);
+                }
                 if (options.namedToHash) {
-                  realHash.bulkHash.update(hashId);
-                  hashId = realHash.bulkHash.digest('hex');
+                  pureId = hashId;
+                  realHash.hashDecorator.update(hashId);
+                  hashId = realHash.hashDecorator.digest();
                 } else {
                   module.id = hashId;
                   usedIds.add(module.id);
@@ -64,11 +74,20 @@ class NamedModuleIdsPlugin {
               while (usedIds.has(hashId.substr(0, len))) len++;
               module.id = hashId.substr(0, len);
               usedIds.add(module.id);
+              // 记录hash之后的映射
+              if (pureId) {
+                namedModuleHashs[pureId] = module.id;
+              }
             }
           }
         }
       );
     });
+    if (callback && typeof callback === 'function') {
+      compiler.hooks.done.tap('NamedModuleIdsPlugin', function() {
+        callback(Array.from(namedModules), namedModuleHashs);
+      });
+    }
   }
 }
 

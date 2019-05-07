@@ -14,6 +14,7 @@
 const path = require('path');
 const globalDirs = require('global-dirs');
 const projectDir = process.cwd();
+const MurmurHash3 = require('imurmurhash');
 // const projectBaseName = path.basename(projectDir);
 // const projectNMS = path.join(projectDir, 'node_modules');
 
@@ -60,6 +61,23 @@ class BulkUpdateDecorator {
   }
 }
 
+class MurmurHashDecorator {
+  constructor() {
+    this.string = "";
+    this.hashState = new MurmurHash3();
+  }
+
+  update(data) {
+    if (typeof data !== "string") data = data.toString("utf-8");
+    this.hashState.hash(data);
+    return this;
+  }
+
+  digest() {
+    return this.hashState && this.hashState.result().toString(16);
+  }
+}
+
 /* istanbul ignore next */
 class DebugHash {
   constructor() {
@@ -80,9 +98,9 @@ class DebugHash {
 }
 
 class NamedHash {
-  constructor(hash, enforeModules = []) {
+  constructor(enforeModules = []) {
     this.string = "";
-    this.bulkHash = new BulkUpdateDecorator(hash);
+    this.hashDecorator = new MurmurHashDecorator();
     this.localRegex = /[\\/]node_modules[\\/]([^\\/]+)[\\/].*/i; // node_modules后面紧跟的一级目录
     this.foldRegex = /@([^@]+)@/g; // 匹配一级目录
     this.versionRegex = /@([\d\.]+)@/; // 匹配flatten中的版本号
@@ -92,13 +110,12 @@ class NamedHash {
   }
 
   update(data, inputEncoding) {
-    let absContext = path.resolve(data);
+    let absContext = path.normalize(path.resolve(data));
     if (absContext.startsWith(globalDirs.npm.packages)) {
       this.string = absContext.replace(globalDirs.npm.packages, '@npm-global-dir');
       return this;
     }
     if (absContext.startsWith(projectDir)) {
-      // const pkg = require(path.join(projectDir, 'package.json'));
       const matchs = this.localRegex.exec(absContext);
       if (matchs && matchs[1]) {
         let flattenName = matchs[1]; // _@xxxx@x.y.z@xxx or _@xxxx@x.y.z@@root
@@ -146,14 +163,14 @@ class NamedHash {
       this.string = absContext.replace(projectDir, '');
       return this;
     }
-    return this.bulkHash.update(data, inputEncoding);
+    return this.hashDecorator.update(data, inputEncoding);
   }
 
   digest(encoding) {
     if (this.string.length) {
       return this.string;
     }
-    return this.bulkHash.digest(encoding);
+    return this.hashDecorator.digest(encoding);
   }
 }
 
@@ -171,7 +188,7 @@ module.exports = (algorithm, enforeModules) => {
     case "debug":
       return new DebugHash();
     case "named":
-      return new NamedHash(require("crypto").createHash('md4'), enforeModules);
+      return new NamedHash(enforeModules);
     default:
       return new BulkUpdateDecorator(require("crypto").createHash(algorithm));
   }

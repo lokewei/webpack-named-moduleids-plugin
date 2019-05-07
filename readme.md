@@ -13,3 +13,7 @@ to generate named webpack internal module name, now you can reuse lib between si
   lib["SketchPicker"]
 
 ```
+
+## more
+
+doing you can find all options in schema/NamedModuleIdsPulgin.json

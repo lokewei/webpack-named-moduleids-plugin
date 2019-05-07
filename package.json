@@ -22,6 +22,7 @@
   "homepage": "https://github.com/lokewei/webpack-named-moduleids-plugin#readme",
   "dependencies": {
     "global-dirs": "^0.1.1",
+    "imurmurhash": "^0.1.4",
     "schema-utils": "^1.0.0"
   }
 }
