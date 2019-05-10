@@ -15,6 +15,7 @@ const path = require('path');
 const globalDirs = require('global-dirs');
 const projectDir = process.cwd();
 const MurmurHash3 = require('imurmurhash');
+const projectPkgData = require(path.join(projectDir, 'package.json'));
 // const projectBaseName = path.basename(projectDir);
 // const projectNMS = path.join(projectDir, 'node_modules');
 
@@ -74,7 +75,9 @@ class MurmurHashDecorator {
   }
 
   digest() {
-    return this.hashState && this.hashState.result().toString(16);
+    const result = this.hashState && this.hashState.result().toString(16);
+    this.hashState = this.hashState && this.hashState.reset(); // reset
+    return result;
   }
 }
 
@@ -98,7 +101,7 @@ class DebugHash {
 }
 
 class NamedHash {
-  constructor(enforeModules = []) {
+  constructor(enforeModules = [], addSourcePrefix) {
     this.string = "";
     this.hashDecorator = new MurmurHashDecorator();
     this.localRegex = /[\\/]node_modules[\\/]([^\\/]+)[\\/].*/i; // node_modules后面紧跟的一级目录
@@ -107,6 +110,7 @@ class NamedHash {
     this.rootRegex = /@@([^@]+)/; // 匹配flatten中的scope名称
     this.scopeRegex = /@[^@\\/]+[\\/][^\\/]+[\\/]/; // 匹配非flatten的scope包名
     this.enforeModules = enforeModules;
+    this.addSourcePrefix = addSourcePrefix;
   }
 
   update(data, inputEncoding) {
@@ -124,12 +128,11 @@ class NamedHash {
           return flattenName.includes(emodule);
         });
         const rootRegexMatchs = this.rootRegex.exec(flattenName);
-        if (!ignore) {
-          const versionMatchs = this.versionRegex.exec(flattenName);
+        const versionMatchs = this.versionRegex.exec(flattenName);
           let version = versionMatchs && versionMatchs[1];
           // 这里处理flatten格式的
           if (rootRegexMatchs && rootRegexMatchs[1]) {
-            const rootName = rootRegexMatchs[1]
+            const rootName = rootRegexMatchs[1];
             const subFolds = [];
             let subFoldMatchs;
             while ((subFoldMatchs = this.foldRegex.exec(flattenName)) !== null) {
@@ -151,16 +154,24 @@ class NamedHash {
           const pkgData = require(path.join(projectDir, 'node_modules', flattenName, 'package.json'));
           const { name } = pkgData;
           version = pkgData.version;
-          const blurVersion = version.split('.').map((v, i) => i > 0 ? 'x' : v).join('.');
-          const blurName = `${name}@${blurVersion}`;
+          let moduleFinalName = `${name}@${version}`;
+          // 模糊化处理
+          if (!ignore) {
+            const blurVersion = version.split('.').map((v, i) => i > 0 ? 'x' : v).join('.');
+            moduleFinalName = `${name}@${blurVersion}`;
+          }
           // const blurName = flattenName.replace(version, blurVersion);
           absContext = absContext.replace(this.localRegex, function(match, $1, offset, str) {
-            return match.replace($1, blurName)
+            return match.replace($1, moduleFinalName);
             // return match.replace($1, blurName);
           });
-        }
       }
       this.string = absContext.replace(projectDir, '');
+      // 这里处理项目本身的module
+      if (!matchs && this.addSourcePrefix) {
+        this.string = `${projectPkgData.name}${this.string}`;
+      }
+      // console.log(this.string);
       return this;
     }
     return this.hashDecorator.update(data, inputEncoding);
@@ -179,7 +190,7 @@ class NamedHash {
  * @param {string | HashConstructor} algorithm the algorithm name or a constructor creating a hash
  * @returns {Hash} the hash
  */
-module.exports = (algorithm, enforeModules) => {
+module.exports = (algorithm, enforeModules, addSourcePrefix) => {
   if (typeof algorithm === "function") {
     return new BulkUpdateDecorator(new algorithm());
   }
@@ -188,7 +199,9 @@ module.exports = (algorithm, enforeModules) => {
     case "debug":
       return new DebugHash();
     case "named":
-      return new NamedHash(enforeModules);
+      return new NamedHash(enforeModules, addSourcePrefix);
+    case "murmur":
+      return new MurmurHashDecorator();
     default:
       return new BulkUpdateDecorator(require("crypto").createHash(algorithm));
   }

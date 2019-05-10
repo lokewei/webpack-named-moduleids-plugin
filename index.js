@@ -26,7 +26,8 @@ class NamedModuleIdsPlugin {
         hashDigestLength: 4,
         enforeModules: [],
         namedToHash: false,
-        callback: null
+        callback: null,
+        addSourcePrefix: false
       },
       options
     );
@@ -50,7 +51,7 @@ class NamedModuleIdsPlugin {
                 context
               });
               module.id = id;
-              const hash = createHash(options.hashFunction, options.enforeModules);
+              const hash = createHash(options.hashFunction, options.enforeModules, options.addSourcePrefix);
               const realHash = hash.update(id);
               let hashId = hash.digest(options.hashDigest);
               let pureId; // 记录本次未hash的id
@@ -68,6 +69,14 @@ class NamedModuleIdsPlugin {
                   usedIds.add(module.id);
                   continue;
                 }
+              } else {
+                // 如果既不是project下的，又不是全局的； 指定为*开头，并hash
+                pureId = id.replace(/(.*)[\\/]node_modules[\\/].*/i, function(match, $1, offset, str) {
+                  return match.replace($1, '*');
+                });
+                const exHash = createHash('murmur');
+                exHash.update(pureId);
+                hashId = exHash.digest();
               }
               let len = options.hashDigestLength;
               // 这个是为了防止hash重复，+1操作

@@ -30,6 +30,14 @@
     "namedToHash": {
       "description": "If generate named module id, whether encode it to hash for minisize",
       "type": "boolean"
+    },
+    "addSourcePrefix": {
+      "description": "If add package name to project self source module name",
+      "type": "boolean"
+    },
+    "customPrefix": {
+      "description": "use custom prefix for project self source module name",
+      "type": "string"
     }
   }
 }
