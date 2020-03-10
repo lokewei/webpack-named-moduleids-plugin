@@ -94,7 +94,7 @@ class NamedModuleIdsPlugin {
     });
     if (callback && typeof callback === 'function') {
       compiler.hooks.done.tap('NamedModuleIdsPlugin', function() {
-        callback(Array.from(namedModules), namedModuleHashs);
+        callback(Array.from(namedModules), namedModuleHashs, compiler.outputFileSystem);
       });
     }
   }
